@@ -17,7 +17,7 @@ import { ViewportProvider, useViewport } from '@suki60/use-viewport'
 
 function App() {
   return (
-    <ViewportProvider>
+    <ViewportProvider ssrViewport="lg">
       <Navbar />
     </ViewportProvider>
   )
@@ -32,45 +32,46 @@ function Navbar() {
 
 `useViewport()` returns:
 
-- `viewport` — the current breakpoint key (e.g. `'md'`), or `null` before the first client render if no `ssrViewport` was provided.
+- `viewport` — the current breakpoint key (e.g. `'md'`).
 - `is(breakpoint)` — true if the current breakpoint exactly matches.
 - `up(breakpoint)` — true if the current breakpoint is at or above the given one.
 - `down(breakpoint)` — true if the current breakpoint is at or below the given one.
 
 `useViewport` throws if called outside a `ViewportProvider`.
 
-## Custom breakpoints
+## Breakpoints
 
-By default, breakpoints match MUI's:
+Breakpoints match MUI's and are currently fixed (not configurable):
 
 ```ts
 { xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 }
 ```
 
-Override them with any `{ [name]: minWidthPx }` map:
-
-```tsx
-<ViewportProvider breakpoints={{ mobile: 0, tablet: 768, desktop: 1280 }}>
-  <App />
-</ViewportProvider>
-```
-
-Breakpoint order is inferred from the min-width values, not object key order.
-
 ## SSR
 
-`matchMedia` isn't available during server rendering, so pass `ssrViewport` with your best guess for the initial breakpoint (e.g. from a `User-Agent` sniff) to avoid a layout flash / hydration mismatch:
+`matchMedia` isn't available during server rendering, so `ViewportProvider` requires an `ssrViewport` prop with your best guess for the initial breakpoint (e.g. from a `User-Agent` sniff) to avoid a layout flash / hydration mismatch. How you obtain that `User-Agent` differs between Next.js's two routers.
 
-```tsx
-// pages/_app.tsx (Next.js Pages Router example)
+Shared helper for both examples below:
+
+```ts
+// getSSRViewport.ts
 import UAParser from 'ua-parser-js'
 
-const getSSRViewport = (userAgent?: string) => {
+export const getSSRViewport = (userAgent?: string) => {
   const { device } = UAParser(userAgent)
   if (device.type === 'mobile') return 'xs'
   if (device.type === 'tablet') return 'sm'
   return 'lg'
 }
+```
+
+### Pages Router
+
+The request is available via `getInitialProps`'s `ctx.req`, so the `User-Agent` is read once per request in `_app.tsx` and passed down as a prop:
+
+```tsx
+// pages/_app.tsx
+import { getSSRViewport } from '../getSSRViewport'
 
 MyApp.getInitialProps = async (appContext) => {
   const props = await App.getInitialProps(appContext)
@@ -90,7 +91,43 @@ const MyApp = ({ Component, pageProps }) => (
 )
 ```
 
-Once mounted client-side, the provider re-evaluates the real breakpoint via `matchMedia` and updates on viewport changes.
+### App Router
+
+There's no `getInitialProps`/`req` here — instead, read the incoming `User-Agent` header with `next/headers` in a Server Component (typically the root `layout.tsx`) and pass it down to a small Client Component wrapper, since `ViewportProvider` itself uses hooks and must run on the client:
+
+```tsx
+// app/layout.tsx (Server Component)
+import { headers } from 'next/headers'
+import { getSSRViewport } from '../getSSRViewport'
+import { Providers } from './providers'
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const userAgent = (await headers()).get('user-agent') ?? undefined
+  const ssrViewport = getSSRViewport(userAgent)
+
+  return (
+    <html lang="en">
+      <body>
+        <Providers ssrViewport={ssrViewport}>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+```tsx
+// app/providers.tsx
+'use client'
+
+import { ViewportProvider } from '@suki60/use-viewport'
+import type { Viewport } from '@suki60/use-viewport'
+
+export function Providers({ ssrViewport, children }: { ssrViewport: Viewport; children: React.ReactNode }) {
+  return <ViewportProvider ssrViewport={ssrViewport}>{children}</ViewportProvider>
+}
+```
+
+Once mounted client-side, the provider re-evaluates the real breakpoint via `matchMedia` and updates on viewport changes, in both routers.
 
 ## License
 
