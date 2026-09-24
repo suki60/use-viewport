@@ -49,21 +49,7 @@ Breakpoints match MUI's and are currently fixed (not configurable):
 
 ## SSR
 
-`matchMedia` isn't available during server rendering, so `ViewportProvider` requires an `ssrViewport` prop with your best guess for the initial breakpoint (e.g. from a `User-Agent` sniff) to avoid a layout flash / hydration mismatch. How you obtain that `User-Agent` differs between Next.js's two routers.
-
-Shared helper for both examples below:
-
-```ts
-// getSSRViewport.ts
-import UAParser from 'ua-parser-js'
-
-export const getSSRViewport = (userAgent?: string) => {
-  const { device } = UAParser(userAgent)
-  if (device.type === 'mobile') return 'xs'
-  if (device.type === 'tablet') return 'sm'
-  return 'lg'
-}
-```
+`matchMedia` isn't available during server rendering, so `ViewportProvider` requires an `ssrViewport` prop with your best guess for the initial breakpoint (e.g. from a `User-Agent` sniff) to avoid a layout flash / hydration mismatch. The package exports a `getServerViewport(userAgent)` helper (backed by `ua-parser-js`) for this. How you obtain that `User-Agent` differs between Next.js's two routers.
 
 ### Pages Router
 
@@ -71,7 +57,7 @@ The request is available via `getInitialProps`'s `ctx.req`, so the `User-Agent` 
 
 ```tsx
 // pages/_app.tsx
-import { getSSRViewport } from '../getSSRViewport'
+import { getServerViewport } from '@suki60/use-viewport'
 
 MyApp.getInitialProps = async (appContext) => {
   const props = await App.getInitialProps(appContext)
@@ -80,7 +66,7 @@ MyApp.getInitialProps = async (appContext) => {
       ? window.navigator.userAgent
       : appContext.ctx.req?.headers['user-agent']
 
-  props.pageProps.ssrViewport = getSSRViewport(userAgent)
+  props.pageProps.ssrViewport = getServerViewport(userAgent ?? '')
   return props
 }
 
@@ -98,12 +84,12 @@ There's no `getInitialProps`/`req` here — instead, read the incoming `User-Age
 ```tsx
 // app/layout.tsx (Server Component)
 import { headers } from 'next/headers'
-import { getSSRViewport } from '../getSSRViewport'
+import { getServerViewport } from '@suki60/use-viewport'
 import { Providers } from './providers'
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const userAgent = (await headers()).get('user-agent') ?? undefined
-  const ssrViewport = getSSRViewport(userAgent)
+  const userAgent = (await headers()).get('user-agent') ?? ''
+  const ssrViewport = getServerViewport(userAgent)
 
   return (
     <html lang="en">
@@ -119,8 +105,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 // app/providers.tsx
 'use client'
 
-import { ViewportProvider } from '@suki60/use-viewport'
-import type { Viewport } from '@suki60/use-viewport'
+import { ViewportProvider, getServerViewport } from '@suki60/use-viewport'
+
+type Viewport = ReturnType<typeof getServerViewport>
 
 export function Providers({ ssrViewport, children }: { ssrViewport: Viewport; children: React.ReactNode }) {
   return <ViewportProvider ssrViewport={ssrViewport}>{children}</ViewportProvider>

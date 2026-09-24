@@ -1,6 +1,6 @@
 {
   "name": "@suki60/use-viewport",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A lightweight React context and hook for responsive breakpoint detection, with SSR support.",
   "type": "module",
   "main": "./dist/index.cjs",
