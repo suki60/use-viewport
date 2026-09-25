@@ -41,10 +41,18 @@ function Navbar() {
 
 ## Breakpoints
 
-Breakpoints match MUI's and are currently fixed (not configurable):
+Breakpoints match Tailwind's defaults:
 
 ```ts
-{ xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 }
+{ sm: 640, md: 768, lg: 1024, xl: 1280, '2xl': 1536 }
+```
+
+They're configurable via the `screens` prop on `ViewportProvider`, using the same shape (a map of breakpoint name to min-width in px):
+
+```tsx
+<ViewportProvider ssrViewport="lg" screens={{ sm: 480, md: 768, lg: 1024, xl: 1440 }}>
+  <Navbar />
+</ViewportProvider>
 ```
 
 ## SSR
