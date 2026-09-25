@@ -1,25 +1,14 @@
-const typedKeys = <T extends object>(obj: T) => Object.keys(obj) as (keyof T)[]
-const typedValues = <T extends object>(obj: T) => Object.values(obj) as T[keyof T][]
-
-const SCREEN = {
-  xs: 0,
-  sm: 600,
-  md: 900,
-  lg: 1200,
-  xl: 1536,
-} as const
-
-const VIEWPORTS = typedKeys(SCREEN)
-const BREAKPOINTS = typedValues(SCREEN)
-
-type Screen = typeof SCREEN
-type Viewport = keyof typeof SCREEN
-type Breakpoint = Screen[Viewport]
-
-export {
-  SCREEN,
-  VIEWPORTS,
-  BREAKPOINTS,
+const DEFAULT_SCREENS = {
+  sm: 640,
+  md: 768,
+  lg: 1024,
+  xl: 1280,
+  '2xl': 1536,
 }
 
-export type { Breakpoint, Viewport, Screen }
+type Screens = typeof DEFAULT_SCREENS
+type Viewport = keyof Screens
+
+export { DEFAULT_SCREENS }
+
+export type { Viewport, Screens }
